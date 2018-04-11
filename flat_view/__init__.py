@@ -1,7 +1,7 @@
 from os import listdir
 from fman import DirectoryPaneCommand, show_alert, show_status_message
 from fman.url import dirname, as_human_readable, join, splitscheme
-from fman.fs import FileSystem, Column
+from fman.fs import FileSystem, Column, is_dir
 
 class FlatView(DirectoryPaneCommand):
 	def __call__(self, url=None):
