@@ -1,55 +1,67 @@
-from os import listdir
-from fman import DirectoryPaneCommand, show_alert, show_status_message
-from fman.url import dirname, as_human_readable, join, splitscheme
-from fman.fs import FileSystem, Column, is_dir
+from fman import DirectoryPaneCommand
+from fman.fs import FileSystem, exists, Column, is_dir, cached
+from fman.url import as_human_readable, as_url, splitscheme, basename
+from os import walk
+from os.path import relpath
+
+import os
+import os.path
 
 class FlatView(DirectoryPaneCommand):
 	def __call__(self, url=None):
 		if url is None:
-			url = self.pane.get_file_under_cursor()		
-	
-		self.pane.set_path('example://'+ dirname(url).replace('file://', ''))
-		# show_alert(self.pane.get_path())
+			url = self.pane.get_file_under_cursor() or self.pane.get_path()
+		if not is_dir(url):
+			url = dirname(url)
+		new_url = Flat.scheme + splitscheme(url)[1]
+		self.pane.set_path(new_url)
 
-class Example(FileSystem):
 
-	scheme = 'example://'
+_SEPARATOR = '|'
 
+class Flat(FileSystem):
+	scheme = 'flat://'
 	def get_default_columns(self, path):
-		return 'core.Name', 'flat_view.FullPath'
-	
-
+		return 'flat_view.Name', 'flat_view.Path'
 	def iterdir(self, path):
-	
-		baseurl = 'file://' + path
+		# Recommended way for turning C:/tmp/one into C:\tmp\one:
+		local_path = as_human_readable('file://' + path)
+		for (dir_path, _, file_names) in walk(local_path):
+			for file_name in file_names:
+				file_path = os.path.join(dir_path, file_name)
+				# file_path is now eg. C:\tmp\one\sub1\file.txt.
+				# If we're iterating C:\tmp\one, yield "sub1|file.txt":
+				yield path_to_name(relpath(file_path, local_path))
+				# The above tells fman that in example://C:/tmp/one, there
+				# are "files" example://C:/tmp/one/sub1|file.txt etc.
+	def resolve(self, path):
+		# Tell fman about the "real" URL of the given file. This is important
+		# eg. when you press Enter on a file. In this case, we want fman to
+		# open file://directory/file.txt, not example://directory/file.txt
+		url = self.scheme + path
+		final_component = basename(url)
+		if _SEPARATOR in final_component:
+			return to_file_url(path)
+		return url
+	@cached
+	def is_dir(self, path):
+		return is_dir(to_file_url(path))
 
-		return self.find_files(baseurl)		
+def path_to_name(path):
+	# Turn sub1\sub2 into sub1|sub2
+	return path.replace(os.sep, _SEPARATOR)
 
+def to_file_url(path):
+	# Turn example://C:/tmp/one/sub1|sub2 -> file://C:/tmp/one/sub1/sub2.
+	return as_url(path.replace(_SEPARATOR, os.sep))
 
+class Name(Column):
+	def get_str(self, url):
+		# Turn example://C:/tmp/one/sub1|sub2 -> sub2:
+		return basename(url).split(_SEPARATOR)[-1]
 
-
-	def find_files(self, path):
-
-		list_files=[]
-		for file_name in listdir(as_human_readable(path)):
-			file_path=join(path, file_name)
-			scheme, simplepath =splitscheme(file_path)
-			# Remove folders and files starting with .   TODO: improve this
-			if not file_name.startswith('.'):				
-				if is_dir(file_path):
-					list_files+=self.find_files(file_path)
-				# Only add Files not Directories
-				else:
-					list_files.append(simplepath)
-
-		return list_files
-
-	def full_path(self, path):
-		return path
-
-
-class FullPath(Column):
-	"""Returns the full path of a url"""
-	def get_str(self, url):			
-		scheme, path =splitscheme(url)
-		return (path)
+class Path(Column):
+	def get_str(self, url):
+		# Turn example://C:/tmp/one/sub1|sub2 -> C:/tmp/one/sub1/sub2:
+		scheme, path = splitscheme(url)
+		return splitscheme(to_file_url(path))[1]
