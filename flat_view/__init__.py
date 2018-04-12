@@ -1,6 +1,6 @@
-from fman import DirectoryPaneCommand
+from fman import DirectoryPaneCommand, DirectoryPaneListener, show_alert
 from fman.fs import FileSystem, exists, Column, is_dir, cached
-from fman.url import as_human_readable, as_url, splitscheme, basename
+from fman.url import as_human_readable, as_url, splitscheme, basename, dirname
 from os import walk
 from os.path import relpath
 
@@ -47,6 +47,8 @@ class Flat(FileSystem):
 	def is_dir(self, path):
 		return is_dir(to_file_url(path))
 
+
+
 def path_to_name(path):
 	# Turn sub1\sub2 into sub1|sub2
 	return path.replace(os.sep, _SEPARATOR)
@@ -54,6 +56,8 @@ def path_to_name(path):
 def to_file_url(path):
 	# Turn example://C:/tmp/one/sub1|sub2 -> file://C:/tmp/one/sub1/sub2.
 	return as_url(path.replace(_SEPARATOR, os.sep))
+
+
 
 class Name(Column):
 	def get_str(self, url):
@@ -65,3 +69,20 @@ class Path(Column):
 		# Turn example://C:/tmp/one/sub1|sub2 -> C:/tmp/one/sub1/sub2:
 		scheme, path = splitscheme(url)
 		return splitscheme(to_file_url(path))[1]
+
+
+
+class FlatViewOpenListener(DirectoryPaneListener):
+	def on_command(self, command_name, args):
+		if 'url' in args:
+			if command_name == 'open_file':
+				url= args['url']
+				scheme, path =splitscheme(url)
+				if scheme=='flat://':
+					self.path=path
+					self.pane.set_path('file://' + path.split(_SEPARATOR)[0], callback=self.callback)
+
+	def callback(self):	
+		self.pane.place_cursor_at(to_file_url(self.path))
+		
+			
