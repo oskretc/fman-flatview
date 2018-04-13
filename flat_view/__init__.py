@@ -1,5 +1,5 @@
-from fman import DirectoryPaneCommand, DirectoryPaneListener, show_prompt
-from fman.fs import FileSystem, exists, Column, is_dir, cached
+from fman import DirectoryPaneCommand, DirectoryPaneListener, show_prompt, show_alert, PLATFORM, YES, NO, YES_TO_ALL, NO_TO_ALL, ABORT, OK
+from fman.fs import FileSystem, exists, Column, is_dir, cached, move_to_trash
 from fman.url import as_human_readable, as_url, splitscheme, basename, dirname
 from os import walk
 from os.path import relpath
@@ -85,6 +85,30 @@ class Flat(FileSystem):
 	def is_dir(self, path):
 		# path=remove_query_text(path)
 		return is_dir(to_file_url(path))
+
+	def move_to_trash(self, path):
+		if not path:
+			show_alert('No file is selected!')
+			return
+		description = as_human_readable('file://' + path)
+		trash = 'Recycle Bin' if PLATFORM == 'Windows' else 'Trash'
+		choice = show_alert(
+			"Do you really want to move %s to the %s?" % (description, trash),
+			YES | NO, YES
+		)
+		if choice & YES:
+			
+			try:
+				move_to_trash(as_url(path))
+				pass
+			except FileNotFoundError:
+				# Perhaps the file has already been deleted.
+				pass
+			except UnsupportedOperation:
+				# delete(path)
+				pass		
+
+
 
 
 
