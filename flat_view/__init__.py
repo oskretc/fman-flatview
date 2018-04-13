@@ -40,6 +40,7 @@ class Flat(FileSystem):
 	filtertext=""
 	def __init__(self):
 
+		# This is used to exclude folders and include files aka Filters
 		self.excludes = ['.*']
 		self.includes = ['*.*']
 		
