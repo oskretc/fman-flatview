@@ -45,9 +45,6 @@ class Flat(FileSystem):
 		
 		self.excludes = r'|'.join([fnmatch.translate(x) for x in self.excludes]) or r'$.'
 		self.includes = r'|'.join([fnmatch.translate(x) for x in self.includes])
-		f= open('c:\\tmp\\flat.txt', 'a')
-		f.write('\n' + self.filtertext)
-		f.close()
 		super().__init__()
 
 	def get_default_columns(self, path):
