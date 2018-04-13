@@ -1,4 +1,4 @@
-from fman import DirectoryPaneCommand, DirectoryPaneListener, show_alert
+from fman import DirectoryPaneCommand, DirectoryPaneListener, show_prompt
 from fman.fs import FileSystem, exists, Column, is_dir, cached
 from fman.url import as_human_readable, as_url, splitscheme, basename, dirname
 from os import walk
@@ -6,6 +6,8 @@ from os.path import relpath
 
 import os
 import os.path
+import re
+import fnmatch
 
 class FlatView(DirectoryPaneCommand):
 	def __call__(self, url=None):
@@ -16,17 +18,48 @@ class FlatView(DirectoryPaneCommand):
 		new_url = Flat.scheme + splitscheme(url)[1]
 		self.pane.set_path(new_url)
 
+class FlatViewFiltered(DirectoryPaneCommand):
+	def __call__(self, url=None):
+		text, ok= show_prompt('Enter Filter e.g. *.txt', default="*.txt", selection_start=2 )
+		if url is None:
+			url = self.pane.get_file_under_cursor() or self.pane.get_path()
+		if not is_dir(url):
+			url = dirname(url)
+		Flat.filtertext=text
+		new_url = Flat.scheme + splitscheme(url)[1]
+		if ok and text:
+			self.pane.set_path(new_url + '?' + text)
+
+
 
 _SEPARATOR = '|'
+_QUERYSEPARATOR = '?'
 
 class Flat(FileSystem):
 	scheme = 'flat://'
+	filtertext=""
+	def __init__(self):
+
+		self.excludes = ['.*']
+		self.includes = ['*.*']
+		
+		self.excludes = r'|'.join([fnmatch.translate(x) for x in self.excludes]) or r'$.'
+		self.includes = r'|'.join([fnmatch.translate(x) for x in self.includes])
+		f= open('c:\\tmp\\flat.txt', 'a')
+		f.write('\n' + self.filtertext)
+		f.close()
+		super().__init__()
+
 	def get_default_columns(self, path):
 		return 'flat_view.Name', 'flat_view.Path'
 	def iterdir(self, path):
 		# Recommended way for turning C:/tmp/one into C:\tmp\one:
 		local_path = as_human_readable('file://' + path)
-		for (dir_path, _, file_names) in walk(local_path):
+		for (dir_path, dirs, file_names) in walk(local_path):
+			# Adding posibility to filter out directories 
+			# and files
+			dirs[:] = [d for d in dirs if not re.match(self.excludes, d)]
+			file_names = [f for f in file_names if re.match(self.includes, f)]
 			for file_name in file_names:
 				file_path = os.path.join(dir_path, file_name)
 				# file_path is now eg. C:\tmp\one\sub1\file.txt.
@@ -57,6 +90,14 @@ def to_file_url(path):
 	# Turn example://C:/tmp/one/sub1|sub2 -> file://C:/tmp/one/sub1/sub2.
 	return as_url(path.replace(_SEPARATOR, os.sep))
 
+def split_query_text(url):
+	new_url=url.split(_QUERYSEPARATOR)[0]
+	query=url.split(_QUERYSEPARATOR)[-1]
+	if new_url==query:
+		return new_url, ''
+	else:
+		return new_url, query
+
 
 
 class Name(Column):
@@ -84,7 +125,8 @@ class FlatViewOpenListener(DirectoryPaneListener):
 					return 'open_directory', {'url':to_file_url(self.path)}
 
 	def callback(self):	
-		self.pane.place_cursor_at(to_file_url(self.path))
+		# self.pane.place_cursor_at(to_file_url(self.path))
+		pass
 		
 		
 			

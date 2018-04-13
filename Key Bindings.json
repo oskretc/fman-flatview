@@ -1,3 +1,5 @@
 [
-	{ "keys": ["F2"], "command": "flat_view" }
+	{ "keys": ["F2"], "command": "flat_view" },
+	{ "keys": ["Ctrl+F2"], "command": "flat_view_filtered" }
+
 ]
