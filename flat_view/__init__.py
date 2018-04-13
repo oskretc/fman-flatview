@@ -27,6 +27,7 @@ class FlatViewFiltered(DirectoryPaneCommand):
 			url = dirname(url)
 		Flat.filtertext=text
 		new_url = Flat.scheme + splitscheme(url)[1]
+		# Not working yet
 		if ok and text:
 			self.pane.set_path(new_url + '?' + text)
 
@@ -43,14 +44,19 @@ class Flat(FileSystem):
 		# This is used to exclude folders and include files aka Filters
 		self.excludes = ['.*']
 		self.includes = ['*.*']
-		
+		self.convert_filters()		
+
+		super().__init__()
+
+	def convert_filters(self):
 		self.excludes = r'|'.join([fnmatch.translate(x) for x in self.excludes]) or r'$.'
 		self.includes = r'|'.join([fnmatch.translate(x) for x in self.includes])
-		super().__init__()
 
 	def get_default_columns(self, path):
 		return 'flat_view.Name', 'flat_view.Path'
 	def iterdir(self, path):
+		# path=remove_query_text(path)
+		# path is in the form of C:/tmp/one or C:/tmp/one?.*txt for filtered
 		# Recommended way for turning C:/tmp/one into C:\tmp\one:
 		local_path = as_human_readable('file://' + path)
 		for (dir_path, dirs, file_names) in walk(local_path):
@@ -66,6 +72,7 @@ class Flat(FileSystem):
 				# The above tells fman that in example://C:/tmp/one, there
 				# are "files" example://C:/tmp/one/sub1|file.txt etc.
 	def resolve(self, path):
+		# path=remove_query_text(path)
 		# Tell fman about the "real" URL of the given file. This is important
 		# eg. when you press Enter on a file. In this case, we want fman to
 		# open file://directory/file.txt, not example://directory/file.txt
@@ -76,6 +83,7 @@ class Flat(FileSystem):
 		return url
 	@cached
 	def is_dir(self, path):
+		# path=remove_query_text(path)
 		return is_dir(to_file_url(path))
 
 
@@ -88,13 +96,14 @@ def to_file_url(path):
 	# Turn example://C:/tmp/one/sub1|sub2 -> file://C:/tmp/one/sub1/sub2.
 	return as_url(path.replace(_SEPARATOR, os.sep))
 
-def split_query_text(url):
-	new_url=url.split(_QUERYSEPARATOR)[0]
-	query=url.split(_QUERYSEPARATOR)[-1]
-	if new_url==query:
-		return new_url, ''
+def remove_query_text(url):
+	return url.split(_QUERYSEPARATOR)[0]
+
+def get_query_text(url):
+	if url.find(_QUERYSEPARATOR):
+		return url.split(_QUERYSEPARATOR)[-1]
 	else:
-		return new_url, query
+		return ''
 
 
 
