@@ -74,15 +74,17 @@ class Path(Column):
 
 class FlatViewOpenListener(DirectoryPaneListener):
 	def on_command(self, command_name, args):
-		if 'url' in args:
-			if command_name == 'open_file':
+		if command_name == 'open_file':
+			if 'url' in args:
 				url= args['url']
 				scheme, path =splitscheme(url)
 				if scheme=='flat://':
 					self.path=path
 					self.pane.set_path('file://' + path.split(_SEPARATOR)[0], callback=self.callback)
+					return 'open_directory', {'url':to_file_url(self.path)}
 
 	def callback(self):	
 		self.pane.place_cursor_at(to_file_url(self.path))
+		
 		
 			
