@@ -1,3 +1,7 @@
+If you like the plugin, consider ...
+
+[![Buy me a coffee][buymeacoffee-shield]][buymeacoffee]
+
 # FlatView
 [fman](https://fman.io) plugin for Flat View, aka Branch View
 
@@ -13,3 +17,6 @@
 * Adding support for Open File natively
 * Ctrl+F2 to set a file filter before entering the FlatView
 * Implement hidden files filter depending on the global setting
+
+[buymeacoffee-shield]: https://www.buymeacoffee.com/assets/img/guidelines/download-assets-sm-2.svg
+[buymeacoffee]: https://www.buymeacoffee.com/4DGUZ2NoO
