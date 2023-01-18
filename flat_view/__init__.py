@@ -31,6 +31,12 @@ class FlatViewFiltered(DirectoryPaneCommand):
 		if ok and text:
 			self.pane.set_path(new_url + '?' + text)
 
+class FlatViewPane(DirectoryPaneCommand):
+	def __call__(self, url=None):
+		if url is None:
+			url = self.pane.get_path()
+		new_url = Flat.scheme + splitscheme(url)[1]
+		self.pane.set_path(new_url)
 
 
 _SEPARATOR = '|'
